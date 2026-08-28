@@ -1,26 +1,38 @@
 @import "tailwindcss";
 
+/* Brand tokens — pulled from the studio242.co theme export, not guessed.
+   The site doesn't offer a dark mode, so these are fixed, not OS-linked. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-1: #EFECEC;
+  --bg-2: #FFFFFF;
+  --text: #252525;
+  --text-muted: rgba(37, 37, 37, 0.75);
+  --text-subtle: rgba(37, 37, 37, 0.55);
+  --accent-1: #2C332F;
+  --accent-2: #3F5147;
+  --button-label: #EFECEC;
+  --border: rgba(37, 37, 37, 0.14);
+
+  --background: var(--bg-1);
+  --foreground: var(--text);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-josefin-sans);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-josefin-sans), sans-serif;
+  letter-spacing: 0.3px;
+}
+
+a {
+  color: inherit;
+}
+a:hover {
+  color: var(--accent-2);
 }
