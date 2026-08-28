@@ -1,14 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getCategoryTile } from "@/lib/homepage";
+import { getCategoryTile, type CategoryTile } from "@/lib/homepage";
 
 export default async function Home() {
-  const [dresses, coordSets, topWear, pajamaSets, bottomWear] = await Promise.all([
+  const [dresses, coordSets, topWear, pajamaSets, kurtis] = await Promise.all([
     getCategoryTile("dresses"),
     getCategoryTile("co-ord-sets"),
     getCategoryTile("top-wear"),
     getCategoryTile("pajama-sets"),
-    getCategoryTile("bottom-wear"),
+    getCategoryTile("kurtis"),
   ]);
 
   return (
@@ -25,15 +25,19 @@ export default async function Home() {
       </section>
 
       <div className="mx-auto max-w-5xl px-6 sm:px-12">
-        <div className="grid grid-cols-2 gap-5">
-          <CollageTile tile={dresses} fallbackSrc="/marketing/dresses.jpg" />
-          <CollageTile tile={coordSets} fallbackSrc="/marketing/coord-sets.jpg" />
-        </div>
+        <SplitCollage
+          stackedSide="left"
+          stackedTop={<CollageCell tile={dresses} fallbackSrc="/marketing/dresses.jpg" />}
+          stackedBottom={
+            <PlainCell src="/marketing/lifestyle-1.jpg" />
+          }
+          large={<PlainCell src="/marketing/new-arrivals.jpg" tall />}
+        />
 
         <div className="mt-6 grid grid-cols-1 gap-5 pb-9 sm:grid-cols-3">
           <CollectionCard tile={topWear} fallbackSrc="/marketing/top-wear.jpg" />
           <CollectionCard tile={pajamaSets} fallbackSrc="/marketing/pajama-sets.jpg" />
-          <CollectionCard tile={bottomWear} fallbackSrc="/marketing/bottom-wear.jpg" />
+          <CollectionCard tile={coordSets} fallbackSrc="/marketing/coord-sets.jpg" />
         </div>
       </div>
 
@@ -59,6 +63,20 @@ export default async function Home() {
           by="Sowmiya, Chennai, TN"
         />
       </section>
+
+      <div className="mx-auto max-w-5xl px-6 pb-11 sm:px-12">
+        <h2 className="mb-6 text-center text-2xl font-light tracking-wide">
+          Check Out Our Bestsellers
+        </h2>
+        <SplitCollage
+          stackedSide="right"
+          large={
+            <CollageCell tile={kurtis} fallbackSrc="/marketing/dresses.jpg" tall label="Bestsellers" />
+          }
+          stackedTop={<PlainCell src="/marketing/bestseller-a.jpg" />}
+          stackedBottom={<PlainCell src="/marketing/bestseller-b.jpg" />}
+        />
+      </div>
 
       <section className="bg-[var(--accent-1)] px-6 py-14 text-center text-[var(--button-label)] sm:px-12">
         <h2 className="mb-3.5 text-2xl font-light">Stay connected</h2>
@@ -88,29 +106,95 @@ export default async function Home() {
   );
 }
 
-function CollageTile({
+// Matches studio242.co's actual collage layout: one large tile plus two
+// stacked smaller tiles beside it — not equal columns. `stackedSide`
+// controls which side the small pair sits on (verified against the live
+// site's real geometry, not eyeballed).
+function SplitCollage({
+  stackedSide,
+  large,
+  stackedTop,
+  stackedBottom,
+}: {
+  stackedSide: "left" | "right";
+  large: React.ReactNode;
+  stackedTop: React.ReactNode;
+  stackedBottom: React.ReactNode;
+}) {
+  const stack = (
+    <div className="grid grid-rows-2 gap-5">
+      {stackedTop}
+      {stackedBottom}
+    </div>
+  );
+  const largeCol = <div className="h-full">{large}</div>;
+
+  // The stacked (narrow) column is always the 1fr track, the large column
+  // always 2fr — which side that maps to just depends on DOM order.
+  const gridCols =
+    stackedSide === "left" ? "sm:grid-cols-[1fr_2fr]" : "sm:grid-cols-[2fr_1fr]";
+
+  return (
+    <div className={`grid grid-cols-1 gap-5 ${gridCols}`}>
+      {stackedSide === "left" ? (
+        <>
+          {stack}
+          {largeCol}
+        </>
+      ) : (
+        <>
+          {largeCol}
+          {stack}
+        </>
+      )}
+    </div>
+  );
+}
+
+function CollageCell({
   tile,
   fallbackSrc,
+  tall,
+  label,
 }: {
-  tile: { name: string; slug: string; image: string | null } | null;
+  tile: CategoryTile | null;
   fallbackSrc: string;
+  tall?: boolean;
+  label?: string;
 }) {
   if (!tile) return null;
   return (
     <Link
       href={`/category/${tile.slug}`}
-      className="group relative block aspect-[4/5] overflow-hidden rounded-md bg-neutral-200"
+      className={`group relative block overflow-hidden rounded-md bg-neutral-200 ${
+        tall ? "h-full min-h-[240px]" : "aspect-[3/4]"
+      }`}
     >
       <Image
         src={tile.image ?? fallbackSrc}
-        alt={tile.name}
+        alt={label ?? tile.name}
         fill
         className="object-cover transition-transform group-hover:scale-105"
       />
       <span className="absolute bottom-5 left-5 rounded-md bg-[var(--bg-1)] px-4 py-2 text-sm tracking-wide text-[var(--text)]">
-        {tile.name}
+        {label ?? tile.name}
       </span>
     </Link>
+  );
+}
+
+// A purely decorative photo — no category to link to (e.g. the standalone
+// lifestyle shot, or "New Arrivals" which isn't a real category in our
+// schema), so no caption or link, unlike CollageCell.
+function PlainCell({ src, tall }: { src: string; tall?: boolean }) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-md bg-neutral-200 ${
+        tall ? "h-full min-h-[240px]" : "aspect-[3/4]"
+      }`}
+    >
+      <Image src={src} alt="" fill className="object-cover" />
+    </div>
   );
 }
 
@@ -118,7 +202,7 @@ function CollectionCard({
   tile,
   fallbackSrc,
 }: {
-  tile: { name: string; slug: string; image: string | null } | null;
+  tile: CategoryTile | null;
   fallbackSrc: string;
 }) {
   if (!tile) return null;

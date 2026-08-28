@@ -12,6 +12,7 @@ export type Database = {
           name: string;
           slug: string;
           sort_order: number;
+          image_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -19,6 +20,7 @@ export type Database = {
           name: string;
           slug: string;
           sort_order?: number;
+          image_url?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["categories"]["Insert"]>;

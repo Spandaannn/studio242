@@ -7,17 +7,21 @@ export interface CategoryTile {
 }
 
 // A homepage collage tile needs one representative photo per category.
-// categories has no image column of its own, so we borrow the newest
-// active product's cover image — zero schema changes, good enough until
-// there's an admin UI to pick a real hero image per category.
+// Prefer the curated image_url (matches studio242.co's real collection
+// photos) — fall back to the newest active product's cover image only
+// for categories that haven't had a hero image set yet.
 export async function getCategoryTile(slug: string): Promise<CategoryTile | null> {
   const { data: category } = await supabase
     .from("categories")
-    .select("name, slug, id")
+    .select("name, slug, id, image_url")
     .eq("slug", slug)
     .single();
 
   if (!category) return null;
+
+  if (category.image_url) {
+    return { name: category.name, slug: category.slug, image: category.image_url };
+  }
 
   const { data: product } = await supabase
     .from("products")

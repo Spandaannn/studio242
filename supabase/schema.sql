@@ -7,13 +7,19 @@
 -- ─── CATEGORIES ───
 -- Product groupings (was "collections" in Shopify).
 -- slug = URL-friendly name ("silk-sarees"), used in /category/[slug]
+-- image_url = curated hero photo for homepage tiles (added post-launch —
+-- without it, the homepage fell back to "whichever product is newest",
+-- which never matched the merchant's actual chosen collection photo).
 create table if not exists categories (
   id         uuid primary key default gen_random_uuid(),
   name       text not null,
   slug       text not null unique,
   sort_order integer not null default 0,
+  image_url  text,
   created_at timestamptz not null default now()
 );
+
+alter table categories add column if not exists image_url text;
 
 -- ─── PRODUCTS ───
 -- One row per product. Variants (size/color) live separately.
