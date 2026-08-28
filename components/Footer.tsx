@@ -15,6 +15,9 @@ export default function Footer() {
             <Link href="/about" className="opacity-85 hover:opacity-100">
               About Us
             </Link>
+            <Link href="/refund-policy" className="opacity-85 hover:opacity-100">
+              Refund Policy
+            </Link>
           </div>
         </div>
 
