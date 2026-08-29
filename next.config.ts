@@ -8,24 +8,17 @@ const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
 
 const nextConfig: NextConfig = {
   images: {
-    remotePatterns: [
-      ...(supabaseHostname
-        ? [
-            {
-              protocol: "https" as const,
-              hostname: supabaseHostname,
-              pathname: "/storage/v1/object/public/**",
-            },
-          ]
-        : []),
-      // Temporary — product_images still point at Shopify's CDN until
-      // FLM-28 downloads and re-hosts them in Supabase Storage.
-      {
-        protocol: "https" as const,
-        hostname: "cdn.shopify.com",
-        pathname: "/**",
-      },
-    ],
+    remotePatterns: supabaseHostname
+      ? [
+          {
+            protocol: "https" as const,
+            hostname: supabaseHostname,
+            pathname: "/storage/v1/object/public/**",
+          },
+        ]
+      : [],
+    // cdn.shopify.com removed — FLM-28 re-hosted every product image to
+    // Supabase Storage, so the site no longer depends on Shopify at all.
   },
 };
 
