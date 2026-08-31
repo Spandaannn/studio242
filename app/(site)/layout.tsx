@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Josefin_Sans } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import "./globals.css";
+import "../globals.css";
 
 // Studio 242's brand typeface, same weights the Shopify theme used
 // (300 for headings, 400 for body).

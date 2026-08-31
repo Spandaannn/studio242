@@ -127,3 +127,14 @@ create policy "public_read_variants"
 -- Orders: NO public policy at all. Anon can neither read nor write.
 -- Writes happen through our server API routes (Day 4), which use
 -- the admin session — not the public key.
+
+-- ═══════════════════════════════════════════════════════════
+-- FLM-25 CLOSED (2026-08-30) — no new policies were needed.
+-- The admin panel (app/(admin)/admin/**) writes exclusively through
+-- lib/supabase-admin.ts (service role key, bypasses RLS entirely) —
+-- it never uses the anon key, so the locked-door state above is
+-- exactly the finished, correct state. Verified with a smoke test:
+-- anon-key insert/update/delete against every table above returns
+-- 0 rows affected (no actual data mutation), confirmed against real
+-- rows, not just empty-table false positives.
+-- ═══════════════════════════════════════════════════════════
