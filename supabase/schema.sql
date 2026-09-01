@@ -96,6 +96,8 @@ create index if not exists idx_products_status    on products(status);
 create index if not exists idx_variants_product   on variants(product_id);
 create index if not exists idx_images_product     on product_images(product_id);
 create index if not exists idx_orders_status      on orders(status);
+create index if not exists idx_order_items_order  on order_items(order_id);
+create index if not exists idx_order_items_variant on order_items(variant_id);
 
 -- ═══════════════════════════════════════════════════════════
 -- ROW LEVEL SECURITY

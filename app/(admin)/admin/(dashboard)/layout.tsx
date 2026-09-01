@@ -26,6 +26,9 @@ function AdminChrome() {
           <Link href="/admin/categories" className="text-neutral-600 hover:text-neutral-900">
             Categories
           </Link>
+          <Link href="/admin/orders" className="text-neutral-600 hover:text-neutral-900">
+            Orders
+          </Link>
         </div>
         <form action={logoutAction}>
           <button type="submit" className="text-neutral-600 hover:text-neutral-900">

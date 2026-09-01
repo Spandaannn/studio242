@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useCart } from "@/components/cart/CartProvider";
 
 interface Variant {
   id: string;
@@ -12,9 +13,19 @@ interface Variant {
 
 interface VariantPickerProps {
   variants: Variant[];
+  productId: string;
+  productName: string;
+  productSlug: string;
+  image: string | null;
 }
 
-export default function VariantPicker({ variants }: VariantPickerProps) {
+export default function VariantPicker({
+  variants,
+  productId,
+  productName,
+  productSlug,
+  image,
+}: VariantPickerProps) {
   const sizes = useMemo(
     () => [...new Set(variants.map((v) => v.size).filter((s): s is string => !!s))],
     [variants]
@@ -26,6 +37,19 @@ export default function VariantPicker({ variants }: VariantPickerProps) {
 
   const [selectedSize, setSelectedSize] = useState<string | null>(sizes[0] ?? null);
   const [selectedColor, setSelectedColor] = useState<string | null>(colors[0] ?? null);
+  const { addItem } = useCart();
+  // Rather than a plain boolean reset via effect (which would need a second
+  // effect just to un-set it when the selection changes), track WHICH
+  // variant was last added and derive "added" by comparing it to the
+  // currently selected one — it's naturally false the instant the shopper
+  // picks a different size/color, with no reset logic needed.
+  const [lastAddedVariantId, setLastAddedVariantId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!lastAddedVariantId) return;
+    const timer = setTimeout(() => setLastAddedVariantId(null), 1500);
+    return () => clearTimeout(timer);
+  }, [lastAddedVariantId]);
 
   const selectedVariant = useMemo(
     () =>
@@ -36,6 +60,7 @@ export default function VariantPicker({ variants }: VariantPickerProps) {
       ),
     [variants, selectedSize, selectedColor, sizes.length, colors.length]
   );
+  const added = selectedVariant != null && lastAddedVariantId === selectedVariant.id;
 
   const pillClass = (active: boolean) =>
     `min-w-[46px] rounded-full border px-4 py-2.5 text-sm transition-colors ${
@@ -104,10 +129,26 @@ export default function VariantPicker({ variants }: VariantPickerProps) {
             <button
               type="button"
               disabled={selectedVariant.stock === 0}
+              onClick={() => {
+                addItem({
+                  variantId: selectedVariant.id,
+                  productId,
+                  productSlug,
+                  productName,
+                  size: selectedVariant.size,
+                  color: selectedVariant.color,
+                  image,
+                  price: selectedVariant.price,
+                });
+                setLastAddedVariantId(selectedVariant.id);
+              }}
               className="mt-4 w-full rounded-md bg-[var(--accent-1)] py-3.5 text-sm tracking-wide text-[var(--button-label)] transition-colors hover:bg-[var(--accent-2)] disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {/* Cashfree checkout lands in FLM-17 — this button is a placeholder until then. */}
-              {selectedVariant.stock > 0 ? "Buy Now — coming soon" : "Out of stock"}
+              {selectedVariant.stock === 0
+                ? "Out of stock"
+                : added
+                  ? "Added ✓"
+                  : "Add to Cart"}
             </button>
           </>
         ) : (

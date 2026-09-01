@@ -67,7 +67,13 @@ export default async function ProductPage(props: PageProps<"/product/[slug]">) {
           <h1 className="text-2xl font-light leading-snug tracking-wide">
             {product.name}
           </h1>
-          <VariantPicker variants={product.variants} />
+          <VariantPicker
+            variants={product.variants}
+            productId={product.id}
+            productName={product.name}
+            productSlug={slug}
+            image={images[0]?.url ?? null}
+          />
           {product.description && (
             // Description comes from Shopify's Body (HTML) field — the merchant's
             // own product copy, not user input, so rendering it as HTML is safe here.

@@ -52,10 +52,10 @@ export function VariantsEditor({ initialVariants }: VariantsEditorProps) {
         <tbody>
           {rows.map((row, i) => (
             <tr key={row.key}>
-              {row.variant.id && (
-                <input type="hidden" name={`variants[${i}].id`} defaultValue={row.variant.id} />
-              )}
               <td className="py-1 pr-2">
+                {row.variant.id && (
+                  <input type="hidden" name={`variants[${i}].id`} defaultValue={row.variant.id} />
+                )}
                 <input
                   name={`variants[${i}].size`}
                   defaultValue={row.variant.size ?? ""}
