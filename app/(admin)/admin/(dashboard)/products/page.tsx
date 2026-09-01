@@ -41,7 +41,7 @@ export default async function AdminProductsPage(props: PageProps<"/admin/product
         <h1 className="text-xl font-semibold">Products</h1>
         <Link
           href="/admin/products/new"
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+          className="rounded-md bg-neutral-200 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-300"
         >
           + New Product
         </Link>
