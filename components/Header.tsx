@@ -1,7 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import NavDropdown from "@/components/NavDropdown";
+import CartCountBadge from "@/components/cart/CartCountBadge";
 
 export default async function Header() {
   const { data: categories, error } = await supabase
@@ -32,16 +32,19 @@ export default async function Header() {
           STUDIO 242
         </Link>
 
-        <div aria-hidden className="flex items-center gap-5 text-[var(--text)]">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+        <div className="flex items-center gap-5 text-[var(--text)]">
+          <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-            <path d="M3 6h18" />
-            <path d="M16 10a4 4 0 0 1-8 0" />
-          </svg>
+          <Link href="/cart" aria-label="Cart" className="relative">
+            <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+              <path d="M3 6h18" />
+              <path d="M16 10a4 4 0 0 1-8 0" />
+            </svg>
+            <CartCountBadge />
+          </Link>
         </div>
       </div>
 
