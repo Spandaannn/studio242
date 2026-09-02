@@ -11,6 +11,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   "missing-fields": "Please fill in your name, phone, and address.",
   "stock-changed":
     "One or more items in your cart are no longer available in the quantity you selected. Please review your cart.",
+  "payment-init-failed":
+    "Couldn't start online payment. Please try again, or choose Cash on Delivery.",
   unknown: "Something went wrong placing your order. Please try again.",
 };
 
@@ -23,6 +25,7 @@ export default function CheckoutForm() {
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "cashfree">("cod");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +52,8 @@ export default function CheckoutForm() {
 
     const result = await createOrder(
       items.map((i) => ({ variantId: i.variantId, qty: i.qty })),
-      { name, phone, email, address, note }
+      { name, phone, email, address, note },
+      paymentMethod
     );
 
     if (!result.ok) {
@@ -58,8 +62,28 @@ export default function CheckoutForm() {
       return;
     }
 
+    if (result.paymentMethod === "cod") {
+      clearCart();
+      router.push(`/order-confirmation/${result.orderId}`);
+      return;
+    }
+
+    // Cashfree — the order already exists and stock is already reserved, so
+    // the cart is cleared here too (the shopper is leaving this component
+    // instance for Cashfree's hosted page, not staying on it). Loaded
+    // dynamically so the SDK stays out of the bundle for the common COD path.
     clearCart();
-    router.push(`/order-confirmation/${result.orderId}`);
+    const { load } = await import("@cashfreepayments/cashfree-js");
+    const cashfree = await load({ mode: result.cashfreeMode });
+    if (!cashfree) {
+      setError(ERROR_MESSAGES["payment-init-failed"]);
+      setSubmitting(false);
+      return;
+    }
+    cashfree.checkout({
+      paymentSessionId: result.paymentSessionId,
+      redirectTarget: "_self",
+    });
   }
 
   return (
@@ -139,12 +163,28 @@ export default function CheckoutForm() {
 
         <div>
           <p className="mb-1 text-xs uppercase tracking-wide text-[var(--text-subtle)]">Payment</p>
-          <div className="rounded-md border border-[var(--border)] px-3 py-2.5 text-sm">
-            Cash on Delivery — pay when your order arrives.
+          <div className="space-y-2">
+            <label className="flex cursor-pointer items-center gap-2.5 rounded-md border border-[var(--border)] px-3 py-2.5 text-sm">
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="cod"
+                checked={paymentMethod === "cod"}
+                onChange={() => setPaymentMethod("cod")}
+              />
+              Cash on Delivery — pay when your order arrives
+            </label>
+            <label className="flex cursor-pointer items-center gap-2.5 rounded-md border border-[var(--border)] px-3 py-2.5 text-sm">
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="cashfree"
+                checked={paymentMethod === "cashfree"}
+                onChange={() => setPaymentMethod("cashfree")}
+              />
+              Pay online — card, UPI, and more
+            </label>
           </div>
-          <p className="mt-1.5 text-xs text-[var(--text-subtle)]">
-            Online payment is coming soon.
-          </p>
         </div>
       </div>
 
@@ -176,7 +216,13 @@ export default function CheckoutForm() {
           disabled={submitting}
           className="mt-5 w-full rounded-md bg-[var(--accent-1)] py-3.5 text-sm tracking-wide text-[var(--button-label)] transition-colors hover:bg-[var(--accent-2)] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {submitting ? "Placing order…" : "Place order"}
+          {submitting
+            ? paymentMethod === "cashfree"
+              ? "Redirecting to payment…"
+              : "Placing order…"
+            : paymentMethod === "cashfree"
+              ? "Pay now"
+              : "Place order"}
         </button>
       </div>
     </form>

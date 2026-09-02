@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { createCashfreeOrder } from "@/lib/cashfree";
 
 // FLM-32 — unlike the admin panel's <form action={fn}> + FormData convention,
 // this is called directly as a function with a plain object from
@@ -24,9 +25,21 @@ export interface CheckoutCustomerInput {
   note: string;
 }
 
+// FLM-33 — tagged union on paymentMethod so the client can branch with a
+// type guard instead of checking for an optional field.
 export type CheckoutResult =
-  | { ok: true; orderId: string }
-  | { ok: false; error: "empty-cart" | "missing-fields" | "stock-changed" | "unknown" };
+  | { ok: true; orderId: string; paymentMethod: "cod" }
+  | {
+      ok: true;
+      orderId: string;
+      paymentMethod: "cashfree";
+      paymentSessionId: string;
+      cashfreeMode: "sandbox" | "production";
+    }
+  | {
+      ok: false;
+      error: "empty-cart" | "missing-fields" | "stock-changed" | "payment-init-failed" | "unknown";
+    };
 
 interface FreshVariant {
   id: string;
@@ -38,7 +51,8 @@ interface FreshVariant {
 
 export async function createOrder(
   items: CheckoutItemInput[],
-  customer: CheckoutCustomerInput
+  customer: CheckoutCustomerInput,
+  paymentMethod: "cod" | "cashfree"
 ): Promise<CheckoutResult> {
   if (items.length === 0) {
     return { ok: false, error: "empty-cart" };
@@ -88,6 +102,7 @@ export async function createOrder(
       note: customer.note.trim() || null,
       total,
       status: "pending_payment",
+      payment_method: paymentMethod,
     })
     .select("id")
     .single();
@@ -106,10 +121,6 @@ export async function createOrder(
   const { error: itemsError } = await supabaseAdmin.from("order_items").insert(orderItems);
   if (itemsError) {
     console.error("createOrder: failed to insert order_items:", itemsError.message);
-    // The order row exists but has no line items — a rare failure between
-    // two inserts with no real transaction available (same accepted
-    // limitation as the admin panel's syncVariants). Surfacing "unknown"
-    // rather than pretending it succeeded.
     return { ok: false, error: "unknown" };
   }
 
@@ -117,7 +128,9 @@ export async function createOrder(
   // (not the value read during validation above), so a concurrent checkout
   // for the same variant can't push stock negative. Best-effort: a failure
   // here doesn't roll back the order, matching the non-atomic-writes
-  // tradeoff already accepted elsewhere (see plan notes).
+  // tradeoff already accepted elsewhere (see plan notes). Shared by both
+  // payment methods — a Cashfree order reserves stock the moment it's
+  // created, same as COD, regardless of whether payment ever completes.
   const slugsToRevalidate = new Set<string>();
   for (const item of items) {
     const slug = byId.get(item.variantId)!.products?.slug;
@@ -154,5 +167,77 @@ export async function createOrder(
     revalidatePath(`/product/${slug}`);
   }
 
-  return { ok: true, orderId: order.id };
+  if (paymentMethod === "cod") {
+    return { ok: true, orderId: order.id, paymentMethod: "cod" };
+  }
+
+  // Cashfree branch — the order + order_items + stock decrement above are
+  // already committed, identical to COD. Only the payment-session step is
+  // specific to this branch.
+  const cashfreeResult = await createCashfreeOrder({
+    orderId: order.id,
+    amount: total,
+    customerName: name,
+    customerPhone: phone,
+    customerEmail: customer.email.trim(),
+  });
+
+  if (!cashfreeResult.ok) {
+    await cancelOrderAndRestoreStock(order.id, items, byId, slugsToRevalidate);
+    return { ok: false, error: "payment-init-failed" };
+  }
+
+  return {
+    ok: true,
+    orderId: order.id,
+    paymentMethod: "cashfree",
+    paymentSessionId: cashfreeResult.paymentSessionId,
+    cashfreeMode: cashfreeResult.cashfreeMode,
+  };
+}
+
+// Compensating action when Cashfree order-creation fails after our order
+// already exists: cancel the order (reusing the existing status value —
+// functionally the same as a merchant manually cancelling) and reverse the
+// stock decrement, same fresh-read-then-conditional-update pattern as the
+// decrement itself. The row is kept, not deleted, so there's always
+// something to attach the failure to and look up by id.
+async function cancelOrderAndRestoreStock(
+  orderId: string,
+  items: CheckoutItemInput[],
+  byId: Map<string, FreshVariant>,
+  slugsToRevalidate: Set<string>
+): Promise<void> {
+  const { error: cancelError } = await supabaseAdmin
+    .from("orders")
+    .update({ status: "cancelled" })
+    .eq("id", orderId);
+  if (cancelError) {
+    console.error(`cancelOrderAndRestoreStock: failed to cancel order ${orderId}:`, cancelError.message);
+  }
+
+  for (const item of items) {
+    const { data: current } = await supabaseAdmin
+      .from("variants")
+      .select("stock")
+      .eq("id", item.variantId)
+      .single();
+    const currentStock = current?.stock ?? 0;
+
+    const { error: restoreError } = await supabaseAdmin
+      .from("variants")
+      .update({ stock: currentStock + item.qty })
+      .eq("id", item.variantId)
+      .eq("stock", currentStock);
+    if (restoreError) {
+      console.error(
+        `cancelOrderAndRestoreStock: stock restore failed for variant ${item.variantId}:`,
+        restoreError.message
+      );
+    }
+  }
+
+  for (const slug of slugsToRevalidate) {
+    revalidatePath(`/product/${slug}`);
+  }
 }

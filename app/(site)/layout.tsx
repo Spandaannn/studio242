@@ -3,6 +3,7 @@ import { Josefin_Sans } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { CartProvider } from "@/components/cart/CartProvider";
+import WhatsAppButton from "@/components/WhatsAppButton";
 import "../globals.css";
 
 // Studio 242's brand typeface, same weights the Shopify theme used
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Header />
           {children}
           <Footer />
+          <WhatsAppButton />
         </CartProvider>
       </body>
     </html>
