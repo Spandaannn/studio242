@@ -71,10 +71,18 @@ create table if not exists orders (
   note       text,
   total      numeric(10,2) not null,
   payment_id text,
+  payment_method text not null default 'cod'
+             check (payment_method in ('cod', 'cashfree')),
   status     text not null default 'pending_payment'
              check (status in ('pending_payment','paid','packed','shipped','delivered','cancelled')),
   created_at timestamptz not null default now()
 );
+
+-- FLM-33: payment_method distinguishes a COD order (no payment expected) from
+-- a Cashfree order still awaiting payment — payment_id alone can't tell them
+-- apart, since both look like NULL/pending until Cashfree confirms.
+alter table orders add column if not exists payment_method text not null default 'cod'
+  check (payment_method in ('cod', 'cashfree'));
 
 -- ─── ORDER ITEMS ───
 -- Line items per order. price_at_purchase freezes the price at

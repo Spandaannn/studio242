@@ -98,6 +98,7 @@ export type Database = {
           note: string | null;
           total: number;
           payment_id: string | null;
+          payment_method: "cod" | "cashfree";
           status:
             | "pending_payment"
             | "paid"
@@ -116,6 +117,7 @@ export type Database = {
           note?: string | null;
           total: number;
           payment_id?: string | null;
+          payment_method?: "cod" | "cashfree";
           status?:
             | "pending_payment"
             | "paid"

@@ -1,0 +1,45 @@
+# FLM-37 — Render Blueprint. Declares build/start commands and env var
+# NAMES here as documentation/reproducibility; actual secret VALUES are
+# entered manually in Render's dashboard (sync: false), never committed.
+#
+# region: singapore — closest of Render's five regions (Oregon, Ohio,
+# Virginia, Frankfurt, Singapore) to India, matters for latency on a
+# storefront whose customers are mostly here.
+services:
+  - type: web
+    name: studio242
+    runtime: node
+    region: singapore
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 26.7.0
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: CASHFREE_APP_ID
+        sync: false
+      - key: CASHFREE_SECRET_KEY
+        sync: false
+      # Deliberately defaults to sandbox — FLM-39's full end-to-end test
+      # runs against sandbox first; flip to "production" only as its own
+      # separate, deliberate last step once everything is confirmed working.
+      - key: CASHFREE_MODE
+        value: sandbox
+      - key: CASHFREE_API_VERSION
+        sync: false
+      - key: CASHFREE_WEBHOOK_SECRET
+        sync: false
+      # Set after the first deploy, once the Render URL (or custom domain)
+      # is known — see FLM-38.
+      - key: SITE_URL
+        sync: false

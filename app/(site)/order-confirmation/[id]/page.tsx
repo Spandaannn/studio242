@@ -14,6 +14,7 @@ interface OrderDetail {
   note: string | null;
   total: number;
   status: string;
+  payment_method: "cod" | "cashfree";
   created_at: string;
   order_items: {
     id: string;
@@ -23,14 +24,26 @@ interface OrderDetail {
   }[];
 }
 
-const STATUS_MESSAGE: Record<string, string> = {
-  pending_payment: "Cash on Delivery — pay when your order arrives.",
-  paid: "Payment received — thank you!",
-  packed: "Your order is packed and ready to ship.",
-  shipped: "Your order is on its way.",
-  delivered: "Your order has been delivered.",
-  cancelled: "This order was cancelled.",
-};
+// pending_payment reads differently depending on how the order was placed:
+// COD, it's the whole point ("pay on delivery"). Cashfree, it means payment
+// didn't complete — should be rare/transient given /checkout/return
+// actively verifies before landing here, but reachable if the webhook is
+// delayed, or the shopper abandoned payment entirely.
+function statusMessage(status: string, paymentMethod: "cod" | "cashfree"): string {
+  if (status === "pending_payment") {
+    return paymentMethod === "cashfree"
+      ? "Payment not completed yet. If you completed payment and still see this, please refresh in a moment."
+      : "Cash on Delivery — pay when your order arrives.";
+  }
+  const MESSAGE: Record<string, string> = {
+    paid: "Payment received — thank you!",
+    packed: "Your order is packed and ready to ship.",
+    shipped: "Your order is on its way.",
+    delivered: "Your order has been delivered.",
+    cancelled: "This order was cancelled.",
+  };
+  return MESSAGE[status] ?? status;
+}
 
 export default async function OrderConfirmationPage(
   props: PageProps<"/order-confirmation/[id]">
@@ -40,7 +53,7 @@ export default async function OrderConfirmationPage(
   const { data: rawOrder, error } = await supabaseAdmin
     .from("orders")
     .select(
-      "id, customer_name, phone, email, address, note, total, status, created_at, order_items(id, qty, price_at_purchase, variants(size, color, products(name, slug)))"
+      "id, customer_name, phone, email, address, note, total, status, payment_method, created_at, order_items(id, qty, price_at_purchase, variants(size, color, products(name, slug)))"
     )
     .eq("id", id)
     .single();
@@ -63,7 +76,7 @@ export default async function OrderConfirmationPage(
           })}
         </p>
         <p className="mt-4 rounded-md border border-[var(--border)] px-4 py-3 text-sm">
-          {STATUS_MESSAGE[order.status] ?? order.status}
+          {statusMessage(order.status, order.payment_method)}
         </p>
 
         <div className="mt-8 divide-y divide-[var(--border)] rounded-md border border-[var(--border)]">
