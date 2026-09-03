@@ -33,6 +33,7 @@ export default function NavDropdown({ label, items }: NavDropdownProps) {
               href={`/category/${item.slug}`}
               className="whitespace-nowrap text-sm text-[var(--text)] hover:text-[var(--accent-2)]"
               onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setOpen(false)}
             >
               {item.name}
             </Link>

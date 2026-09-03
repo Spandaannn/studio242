@@ -3,15 +3,33 @@ import { supabase } from "@/lib/supabase";
 import NavDropdown from "@/components/NavDropdown";
 import CartCountBadge from "@/components/cart/CartCountBadge";
 
+// The hand-written Database type in lib/supabase.ts doesn't encode table
+// relationships, so this nested select comes back untyped — same pattern
+// used throughout the codebase (see ProductGrid.tsx).
+interface CategoryWithActiveProducts {
+  name: string;
+  slug: string;
+  products: { id: string }[];
+}
+
 export default async function Header() {
-  const { data: categories, error } = await supabase
+  // products!inner(id) turns the embed into an inner join, filtering out
+  // any category with zero matching (active) products in one round trip —
+  // no separate count query needed. The embedded products array itself is
+  // only used as an existence filter; it's stripped back down to
+  // {name, slug} below before reaching NavDropdown.
+  const { data, error } = await supabase
     .from("categories")
-    .select("name, slug")
+    .select("name, slug, products!inner(id)")
+    .eq("products.status", "active")
     .order("sort_order", { ascending: true });
 
   if (error) {
     console.error("Header: failed to load categories:", error.message);
   }
+
+  const categoriesWithProducts = (data ?? []) as unknown as CategoryWithActiveProducts[];
+  const categories = categoriesWithProducts.map(({ name, slug }) => ({ name, slug }));
 
   return (
     <header className="bg-[var(--bg-2)] text-[var(--text)]">
@@ -49,7 +67,7 @@ export default async function Header() {
       </div>
 
       <nav className="flex flex-wrap items-center justify-center gap-8 border-t border-[var(--border)] px-6 py-3.5">
-        <NavDropdown label="Shop" items={categories ?? []} />
+        <NavDropdown label="Shop" items={categories} />
         <Link href="/contact" className="text-[15px] tracking-wide">
           Contact Us
         </Link>
